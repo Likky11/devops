@@ -1,0 +1,51 @@
+resource "aws_instance" "test1" {
+  ami           = "ami-0c4e24a7a4b6122af"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "Test"
+  }
+vpc_security_group_ids = [aws_security_group.test1-sg.id]
+key_name = "test1"
+user_data = <<EOF
+#!/bin/bash
+mkdir /home/ubuntu/sai
+echo "hello sai" >> /home/ubuntu/sai/test
+sudo apt update -y
+sudo apt install -y apache2
+sudo systemctl status apache2
+sudo apt install amazon-ec2-utils
+public_ip=$(ec2-metadata --public-ip | awk '{print $2}')
+echo "$public_ip"
+echo "<!DOCTYPE html>
+<html>
+<head>
+    <title>Sample Page</title>
+</head>
+<body>
+    <h1>Welcome to your dev_training server $public_ip</h1>
+</body>
+</html>" | sudo tee /var/www/html/index.html
+EOF
+}
+resource "aws_security_group" "test1-sg" {
+  name        = "test1-sg"
+  description = "Allow TLS inbound traffic and all outbound traffic"
+  vpc_id      = "vpc-0000face6195ad89d"
+# ... other configuration ...
+
+  ingress {
+    from_port        = 22
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    description = "allow ssh to all traffic"
+  }
+ egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    #ipv6_cidr_blocks = ["::/0"]
+  }
+}
